@@ -292,11 +292,11 @@
         <button id="dismissBtn" data-i18n="later">Позже</button>
     </div>
 
-    <div class="version" id="versionDisplay">Version Build: 1.05b - Release</div>
+    <div class="version" id="versionDisplay">Version Build: 1.06a - Release</div>
 
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js?v=2');
         }
 
         let deferredPrompt;
@@ -350,42 +350,76 @@
 
         const translations = {
             ru: {
-                title: '🔊 i want bass boost this',
+                title: '🔊 Bass Booster',
                 upload: '🎵 Загрузить аудио',
                 seek: 'Перемотка',
                 boost: 'Усиление басов',
                 play: '▶️ Играть',
+                pause: '⏸️ Пауза',
                 download: '💾 Скачать',
+                processing: '⏳ Обработка...',
                 install: '📱 Установить на главный экран?',
                 installBtn: 'Установить',
                 later: 'Позже'
             },
             en: {
-                title: '🔊 i want bass boost this',
+                title: '🔊 Bass Booster',
                 upload: '🎵 Upload audio',
-                seek: 'Rewind',
+                seek: 'Seek',
                 boost: 'Bass boost',
                 play: '▶️ Play',
+                pause: '⏸️ Pause',
                 download: '💾 Download',
+                processing: '⏳ Processing...',
                 install: '📱 Install to home screen?',
                 installBtn: 'Install',
                 later: 'Later'
             }
         };
 
+        const cisCountries = ['RU', 'BY', 'KZ', 'KG', 'TJ', 'TM', 'UZ', 'AM', 'AZ', 'MD', 'UA'];
+
+        async function detectLanguage() {
+            const saved = localStorage.getItem('bass-booster-lang');
+            if (saved) {
+                return saved;
+            }
+
+            try {
+                const response = await fetch('https://ipapi.co/json/');
+                const data = await response.json();
+                const countryCode = data.country_code;
+                
+                if (cisCountries.includes(countryCode)) {
+                    return 'ru';
+                } else {
+                    return 'en';
+                }
+            } catch (error) {
+                const browserLang = navigator.language.toLowerCase();
+                if (browserLang.startsWith('ru') || browserLang.startsWith('be') || browserLang.startsWith('uk')) {
+                    return 'ru';
+                }
+                return 'en';
+            }
+        }
+
         function setLanguage(lang) {
             currentLang = lang;
+            localStorage.setItem('bass-booster-lang', lang);
+            
             const elements = document.querySelectorAll('[data-i18n]');
             elements.forEach(el => {
                 const key = el.getAttribute('data-i18n');
                 if (translations[lang][key]) {
-                    if (el.tagName === 'BUTTON' && key === 'play' && isPlaying) {
-                        el.textContent = '⏸️ ' + (lang === 'ru' ? 'Пауза' : 'Pause');
+                    if (el.id === 'playBtn') {
+                        el.textContent = isPlaying ? translations[lang].pause : translations[lang].play;
                     } else {
                         el.textContent = translations[lang][key];
                     }
                 }
             });
+            
             langItems.forEach(item => {
                 item.classList.toggle('active', item.dataset.lang === lang);
             });
@@ -395,6 +429,10 @@
             item.addEventListener('click', () => {
                 setLanguage(item.dataset.lang);
             });
+        });
+
+        detectLanguage().then(lang => {
+            setLanguage(lang);
         });
 
         function formatTime(seconds) {
@@ -422,7 +460,7 @@
                 updateInterval = null;
             }
             isPlaying = false;
-            playBtn.textContent = '▶️ ' + (currentLang === 'ru' ? 'Играть' : 'Play');
+            playBtn.textContent = translations[currentLang].play;
         }
 
         function startAudio(offset) {
@@ -457,7 +495,7 @@
             startTime = audioContext.currentTime;
             currentOffset = offset;
             isPlaying = true;
-            playBtn.textContent = '⏸️ ' + (currentLang === 'ru' ? 'Пауза' : 'Pause');
+            playBtn.textContent = translations[currentLang].pause;
             
             isSeeking = false;
 
@@ -590,7 +628,7 @@
         downloadBtn.addEventListener('click', async () => {
             if (!audioBuffer) return;
 
-            downloadBtn.textContent = '⏳ ' + (currentLang === 'ru' ? 'Обработка...' : 'Processing...');
+            downloadBtn.textContent = translations[currentLang].processing;
             downloadBtn.disabled = true;
 
             try {
@@ -627,7 +665,7 @@
 
                 URL.revokeObjectURL(url);
             } finally {
-                downloadBtn.textContent = '💾 ' + (currentLang === 'ru' ? 'Скачать' : 'Download');
+                downloadBtn.textContent = translations[currentLang].download;
                 downloadBtn.disabled = false;
             }
         });
@@ -679,8 +717,6 @@
                 pos += 4;
             }
         }
-
-        setLanguage('ru');
     </script>
 </body>
 </html>
