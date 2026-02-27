@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bass Booster</title>
+    <meta name="theme-color" content="#1a1a1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black">
+    <meta name="apple-mobile-web-app-title" content="Bass 🔊">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'%3E%3Crect width='48' height='48' fill='%232a2a2a' rx='12'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-size='24'%3E🔊%3C/text%3E%3C/svg%3E">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 60px 20px 20px;
+        }
+
+        .language-selector {
+            position: fixed;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            background: #3a3a3a;
+            padding: 5px 12px;
+            border-radius: 30px;
+            align-items: center;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .lang-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            color: #aaa;
+            font-size: 0.85em;
+            padding: 3px 6px;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .lang-item.active {
+            background: #555;
+            color: #fff;
+        }
+
+        .lang-item img {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .container {
+            background: #2a2a2a;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            color: #fff;
+            margin-bottom: 30px;
+            font-size: 1.5em;
+        }
+
+        .upload-area {
+            border: 2px dashed #555;
+            border-radius: 15px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+            background: #333;
+            color: #fff;
+        }
+
+        .upload-area:hover {
+            border-color: #777;
+            background: #3a3a3a;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .controls {
+            display: none;
+        }
+
+        .controls.active {
+            display: block;
+        }
+
+        .slider-container {
+            margin: 20px 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #ccc;
+            font-size: 0.9em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            border-radius: 10px;
+            background: #444;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #fff;
+            cursor: pointer;
+            border: none;
+        }
+
+        .value-display {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 1.2em;
+            color: #fff;
+        }
+
+        .time-display {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .play-btn {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 12px 35px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+
+        .play-btn:hover {
+            background: #eee;
+        }
+
+        .play-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .download-btn {
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .download-btn:hover {
+            background: #555;
+        }
+
+        .file-info {
+            text-align: center;
+            color: #999;
+            margin-bottom: 15px;
+            font-size: 0.85em;
+        }
+
+        .version {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            color: #555;
+            font-size: 0.75em;
+        }
+
+        .install-prompt {
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2a2a2a;
+            color: #fff;
+            padding: 15px 25px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 1000;
+            text-align: center;
+        }
+
+        .install-prompt.active {
+            display: block;
+        }
+
+        .install-prompt button {
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 10px;
+            margin: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="language-selector">
+        <div class="lang-item active" data-lang="ru">
+            <span></span> Русский
+        </div>
+        <div class="lang-item" data-lang="en">
+            <span></span> English
+        </div>
+    </div>
+
+    <div class="container">
+        <h1 data-i18n="title">🔊 Bass Booster</h1>
+
+        <div class="upload-area" id="uploadArea">
+            <p data-i18n="upload">🎵 Загрузить аудио</p>
+            <input type="file" id="audioFile" accept="audio/*">
+        </div>
+
+        <div class="controls" id="controls">
+            <div class="file-info" id="fileInfo"></div>
+
+            <div class="slider-container">
+                <label data-i18n="seek">Перемотка</label>
+                <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1">
+                <div class="time-display"><span id="currentTime">0:00</span> / <span id="duration">0:00</span></div>
+            </div>
+
+            <div class="slider-container">
+                <label data-i18n="boost">Усиление басов</label>
+                <input type="range" id="bassBoost" min="0" max="100" value="0" step="1">
+                <div class="value-display">+<span id="bassValue">0</span> dB</div>
+            </div>
+
+            <button class="play-btn" id="playBtn" disabled data-i18n="play">▶️ Играть</button>
+            <button class="download-btn" id="downloadBtn" data-i18n="download">💾 Скачать</button>
+        </div>
+    </div>
+
+    <div class="install-prompt" id="installPrompt">
+        <p data-i18n="install">📱 Установить на главный экран?</p>
+        <button id="installBtn" data-i18n="installBtn">Установить</button>
+        <button id="dismissBtn" data-i18n="later">Позже</button>
+    </div>
+
+    <div class="version" id="versionDisplay">Version Build: 1.05b - Release</div>
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+
+        let deferredPrompt;
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').classList.add('active');
+        });
+
+        document.getElementById('installBtn').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                document.getElementById('installPrompt').classList.remove('active');
+            }
+        });
+
+        document.getElementById('dismissBtn').addEventListener('click', () => {
+            document.getElementById('installPrompt').classList.remove('active');
+        });
+
+        const uploadArea = document.getElementById('uploadArea');
+        const audioFile = document.getElementById('audioFile');
+        const controls = document.getElementById('controls');
+        const bassBoostSlider = document.getElementById('bassBoost');
+        const seekSlider = document.getElementById('seekSlider');
+        const bassValue = document.getElementById('bassValue');
+        const playBtn = document.getElementById('playBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const fileInfo = document.getElementById('fileInfo');
+        const currentTimeDisplay = document.getElementById('currentTime');
+        const durationDisplay = document.getElementById('duration');
+
+        let audioContext;
+        let sourceNode;
+        let bassBoostFilter;
+        let gainNode;
+        let audioBuffer;
+        let isPlaying = false;
+        let startTime = 0;
+        let currentOffset = 0;
+        let currentFileName = '';
+        let updateInterval;
+        let isDraggingSeek = false;
+        let isSeeking = false;
+
+        const langItems = document.querySelectorAll('.lang-item');
+        let currentLang = 'ru';
+
+        const translations = {
+            ru: {
+                title: '🔊 i want bass boost this',
+                upload: '🎵 Загрузить аудио',
+                seek: 'Перемотка',
+                boost: 'Усиление басов',
+                play: '▶️ Играть',
+                download: '💾 Скачать',
+                install: '📱 Установить на главный экран?',
+                installBtn: 'Установить',
+                later: 'Позже'
+            },
+            en: {
+                title: '🔊 i want bass boost this',
+                upload: '🎵 Upload audio',
+                seek: 'Rewind',
+                boost: 'Bass boost',
+                play: '▶️ Play',
+                download: '💾 Download',
+                install: '📱 Install to home screen?',
+                installBtn: 'Install',
+                later: 'Later'
+            }
+        };
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            const elements = document.querySelectorAll('[data-i18n]');
+            elements.forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    if (el.tagName === 'BUTTON' && key === 'play' && isPlaying) {
+                        el.textContent = '⏸️ ' + (lang === 'ru' ? 'Пауза' : 'Pause');
+                    } else {
+                        el.textContent = translations[lang][key];
+                    }
+                }
+            });
+            langItems.forEach(item => {
+                item.classList.toggle('active', item.dataset.lang === lang);
+            });
+        }
+
+        langItems.forEach(item => {
+            item.addEventListener('click', () => {
+                setLanguage(item.dataset.lang);
+            });
+        });
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function getCurrentTime() {
+            if (!audioContext || !isPlaying) return currentOffset;
+            return currentOffset + (audioContext.currentTime - startTime);
+        }
+
+        function stopAudio() {
+            if (sourceNode) {
+                try {
+                    sourceNode.onended = null;
+                    sourceNode.stop();
+                    sourceNode.disconnect();
+                } catch (e) {}
+                sourceNode = null;
+            }
+            if (updateInterval) {
+                clearInterval(updateInterval);
+                updateInterval = null;
+            }
+            isPlaying = false;
+            playBtn.textContent = '▶️ ' + (currentLang === 'ru' ? 'Играть' : 'Play');
+        }
+
+        function startAudio(offset) {
+            isSeeking = true;
+            stopAudio();
+
+            sourceNode = audioContext.createBufferSource();
+            sourceNode.buffer = audioBuffer;
+
+            bassBoostFilter = audioContext.createBiquadFilter();
+            bassBoostFilter.type = 'lowshelf';
+            bassBoostFilter.frequency.value = 200;
+            bassBoostFilter.gain.value = parseFloat(bassBoostSlider.value);
+
+            gainNode = audioContext.createGain();
+            gainNode.gain.value = 0.8;
+
+            sourceNode.connect(bassBoostFilter);
+            bassBoostFilter.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            sourceNode.onended = () => {
+                if (isPlaying && !isSeeking) {
+                    stopAudio();
+                    currentOffset = 0;
+                    seekSlider.value = 0;
+                    currentTimeDisplay.textContent = '0:00';
+                }
+            };
+
+            sourceNode.start(0, offset);
+            startTime = audioContext.currentTime;
+            currentOffset = offset;
+            isPlaying = true;
+            playBtn.textContent = '⏸️ ' + (currentLang === 'ru' ? 'Пауза' : 'Pause');
+            
+            isSeeking = false;
+
+            updateInterval = setInterval(() => {
+                if (isPlaying && !isDraggingSeek) {
+                    const time = getCurrentTime();
+                    currentTimeDisplay.textContent = formatTime(time);
+                    seekSlider.value = time;
+                }
+            }, 100);
+        }
+
+        uploadArea.addEventListener('click', () => audioFile.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('audio/')) {
+                loadAudio(file);
+            }
+        });
+
+        audioFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                loadAudio(file);
+            }
+        });
+
+        async function loadAudio(file) {
+            try {
+                stopAudio();
+                currentOffset = 0;
+                
+                currentFileName = file.name.replace(/\.[^/.]+$/, '');
+                fileInfo.textContent = `📁 ${file.name}`;
+                controls.classList.add('active');
+
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                const arrayBuffer = await file.arrayBuffer();
+                audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+                const duration = audioBuffer.duration;
+                durationDisplay.textContent = formatTime(duration);
+                seekSlider.max = duration;
+                seekSlider.value = 0;
+                currentTimeDisplay.textContent = '0:00';
+
+                playBtn.disabled = false;
+                
+                startAudio(0);
+
+            } catch (error) {
+                alert('Ошибка загрузки файла: ' + error.message);
+            }
+        }
+
+        bassBoostSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            bassValue.textContent = value;
+            if (bassBoostFilter) {
+                bassBoostFilter.gain.value = parseFloat(value);
+            }
+        });
+
+        seekSlider.addEventListener('mousedown', () => {
+            isDraggingSeek = true;
+        });
+
+        seekSlider.addEventListener('touchstart', () => {
+            isDraggingSeek = true;
+        });
+
+        seekSlider.addEventListener('input', (e) => {
+            if (isDraggingSeek) {
+                currentTimeDisplay.textContent = formatTime(parseFloat(e.target.value));
+            }
+        });
+
+        seekSlider.addEventListener('mouseup', (e) => {
+            if (isDraggingSeek) {
+                const wasPlaying = isPlaying;
+                const newTime = parseFloat(seekSlider.value);
+                
+                isDraggingSeek = false;
+                
+                if (wasPlaying) {
+                    startAudio(newTime);
+                } else {
+                    currentOffset = newTime;
+                    currentTimeDisplay.textContent = formatTime(newTime);
+                }
+            }
+        });
+
+        seekSlider.addEventListener('touchend', (e) => {
+            if (isDraggingSeek) {
+                const wasPlaying = isPlaying;
+                const newTime = parseFloat(seekSlider.value);
+                
+                isDraggingSeek = false;
+                
+                if (wasPlaying) {
+                    startAudio(newTime);
+                } else {
+                    currentOffset = newTime;
+                    currentTimeDisplay.textContent = formatTime(newTime);
+                }
+            }
+        });
+
+        playBtn.addEventListener('click', () => {
+            if (!audioBuffer) return;
+
+            if (isPlaying) {
+                currentOffset = getCurrentTime();
+                stopAudio();
+            } else {
+                startAudio(currentOffset);
+            }
+        });
+
+        downloadBtn.addEventListener('click', async () => {
+            if (!audioBuffer) return;
+
+            downloadBtn.textContent = '⏳ ' + (currentLang === 'ru' ? 'Обработка...' : 'Processing...');
+            downloadBtn.disabled = true;
+
+            try {
+                const targetSampleRate = 22050;
+                
+                const offlineContext = new OfflineAudioContext(
+                    audioBuffer.numberOfChannels,
+                    Math.floor(audioBuffer.length * targetSampleRate / audioBuffer.sampleRate),
+                    targetSampleRate
+                );
+
+                const offlineSource = offlineContext.createBufferSource();
+                offlineSource.buffer = audioBuffer;
+
+                const offlineFilter = offlineContext.createBiquadFilter();
+                offlineFilter.type = 'lowshelf';
+                offlineFilter.frequency.value = 200;
+                offlineFilter.gain.value = parseFloat(bassBoostSlider.value);
+
+                offlineSource.connect(offlineFilter);
+                offlineFilter.connect(offlineContext.destination);
+                offlineSource.start(0);
+
+                const renderedBuffer = await offlineContext.startRendering();
+
+                const wav = bufferToWave(renderedBuffer);
+                const blob = new Blob([wav], { type: 'audio/wav' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${currentFileName} - Bassed.wav`;
+                a.click();
+
+                URL.revokeObjectURL(url);
+            } finally {
+                downloadBtn.textContent = '💾 ' + (currentLang === 'ru' ? 'Скачать' : 'Download');
+                downloadBtn.disabled = false;
+            }
+        });
+
+        function bufferToWave(buffer) {
+            const length = buffer.length * buffer.numberOfChannels * 2 + 44;
+            const arrayBuffer = new ArrayBuffer(length);
+            const view = new DataView(arrayBuffer);
+            const channels = [];
+            let offset = 0;
+            let pos = 0;
+
+            setUint32(0x46464952);
+            setUint32(length - 8);
+            setUint32(0x45564157);
+            setUint32(0x20746d66);
+            setUint32(16);
+            setUint16(1);
+            setUint16(buffer.numberOfChannels);
+            setUint32(buffer.sampleRate);
+            setUint32(buffer.sampleRate * 2 * buffer.numberOfChannels);
+            setUint16(buffer.numberOfChannels * 2);
+            setUint16(16);
+            setUint32(0x61746164);
+            setUint32(length - pos - 4);
+
+            for (let i = 0; i < buffer.numberOfChannels; i++) {
+                channels.push(buffer.getChannelData(i));
+            }
+
+            while (pos < length - 44) {
+                for (let i = 0; i < buffer.numberOfChannels; i++) {
+                    const sample = Math.max(-1, Math.min(1, channels[i][offset]));
+                    view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+                    pos += 2;
+                }
+                offset++;
+            }
+
+            return arrayBuffer;
+
+            function setUint16(data) {
+                view.setUint16(pos, data, true);
+                pos += 2;
+            }
+
+            function setUint32(data) {
+                view.setUint32(pos, data, true);
+                pos += 4;
+            }
+        }
+
+        setLanguage('ru');
+    </script>
+</body>
+</html>
