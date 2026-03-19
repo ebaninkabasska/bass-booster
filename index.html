@@ -55,6 +55,10 @@
             transition: all 0.2s;
         }
 
+        .lang-item:hover {
+            color: #ddd;
+        }
+
         .lang-item.active {
             background: #555;
             color: #fff;
@@ -85,11 +89,17 @@
             margin-bottom: 20px;
             background: #333;
             color: #fff;
+            transition: border-color 0.2s, background 0.2s, transform 0.15s;
         }
 
         .upload-area:hover {
             border-color: #777;
             background: #3a3a3a;
+            transform: scale(1.01);
+        }
+
+        .upload-area:active {
+            transform: scale(0.98);
         }
 
         input[type="file"] {
@@ -132,6 +142,12 @@
             border-radius: 50%;
             background: #fff;
             cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        input[type="range"]:hover::-webkit-slider-thumb {
+            transform: scale(1.2);
+            box-shadow: 0 0 6px rgba(255,255,255,0.4);
         }
 
         input[type="range"]::-moz-range-thumb {
@@ -141,6 +157,7 @@
             background: #fff;
             cursor: pointer;
             border: none;
+            transition: transform 0.15s;
         }
 
         .value-display {
@@ -157,6 +174,7 @@
             color: #999;
         }
 
+        /* — PLAY BUTTON — */
         .play-btn {
             background: #fff;
             color: #000;
@@ -168,17 +186,43 @@
             width: 100%;
             margin-top: 20px;
             font-weight: bold;
+            position: relative;
+            overflow: hidden;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+        }
+
+        .play-btn::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at center, rgba(0,0,0,0.12) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
         .play-btn:hover {
             background: #eee;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(255,255,255,0.15);
+        }
+
+        .play-btn:active {
+            transform: translateY(0) scale(0.97);
+            box-shadow: none;
+        }
+
+        .play-btn:active::after {
+            opacity: 1;
         }
 
         .play-btn:disabled {
             opacity: 0.3;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
+        /* — DOWNLOAD BUTTON — */
         .download-btn {
             background: #444;
             color: #fff;
@@ -189,10 +233,26 @@
             cursor: pointer;
             width: 100%;
             margin-top: 10px;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
         }
 
         .download-btn:hover {
-            background: #555;
+            background: #525252;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 14px rgba(0,0,0,0.4);
+        }
+
+        .download-btn:active {
+            transform: translateY(0) scale(0.97);
+            background: #3a3a3a;
+            box-shadow: none;
+        }
+
+        .download-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .file-info {
@@ -238,6 +298,16 @@
             margin: 5px;
             cursor: pointer;
             font-weight: bold;
+            transition: transform 0.15s, background 0.2s;
+        }
+
+        .install-prompt button:hover {
+            transform: translateY(-1px);
+            background: #eee;
+        }
+
+        .install-prompt button:active {
+            transform: scale(0.96);
         }
 
         .loading-overlay {
@@ -315,7 +385,7 @@
         <div class="loading-text" data-i18n="loading">🔉 Аудио загружается...</div>
     </div>
 
-    <div class="version" id="versionDisplay">Version Build: 1.06b - Release</div>
+    <div class="version" id="versionDisplay">Version Build: 1.06e - Release</div>
 
     <script>
         if ('serviceWorker' in navigator) {
@@ -390,7 +460,7 @@
             en: {
                 title: '🔊 Bass Booster',
                 upload: '🎵 Upload audio',
-                seek: 'Seek',
+                seek: 'Seek position',
                 boost: 'Bass boost',
                 play: '▶️ Play',
                 pause: '⏸️ Pause',
@@ -472,6 +542,90 @@
             return currentOffset + (audioContext.currentTime - startTime);
         }
 
+        // — COVER ART — генерируем SVG-обложку с названием трека
+        function generateCoverDataUrl(title) {
+            const short = title.length > 24 ? title.slice(0, 22) + '…' : title;
+            const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#2e2e2e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <text x="256" y="230" font-family="Arial,sans-serif" font-size="120" text-anchor="middle" fill="#fff">🔊</text>
+  <text x="256" y="340" font-family="Arial,sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#fff">[BASSED]</text>
+  <text x="256" y="390" font-family="Arial,sans-serif" font-size="22" text-anchor="middle" fill="#aaa">${short.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</text>
+</svg>`;
+            return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        }
+
+        // — MEDIA SESSION — регистрируем плеер в шторке
+        function setupMediaSession() {
+            if (!('mediaSession' in navigator)) return;
+
+            const coverUrl = generateCoverDataUrl(currentFileName);
+
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: currentFileName || 'Bass Booster',
+                artist: '[BASSED]',
+                album: 'Bass Booster',
+                artwork: [
+                    { src: coverUrl, sizes: '512x512', type: 'image/svg+xml' }
+                ]
+            });
+
+            navigator.mediaSession.setActionHandler('play', () => {
+                if (!isPlaying && audioBuffer) startAudio(currentOffset);
+            });
+
+            navigator.mediaSession.setActionHandler('pause', () => {
+                if (isPlaying) {
+                    currentOffset = getCurrentTime();
+                    stopAudio();
+                }
+            });
+
+            navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+                const skip = details.seekOffset || 10;
+                const newTime = Math.max(0, getCurrentTime() - skip);
+                if (isPlaying) startAudio(newTime);
+                else { currentOffset = newTime; updateSeekUI(newTime); }
+            });
+
+            navigator.mediaSession.setActionHandler('seekforward', (details) => {
+                const skip = details.seekOffset || 10;
+                const newTime = Math.min(audioBuffer.duration, getCurrentTime() + skip);
+                if (isPlaying) startAudio(newTime);
+                else { currentOffset = newTime; updateSeekUI(newTime); }
+            });
+
+            navigator.mediaSession.setActionHandler('seekto', (details) => {
+                if (details.seekTime != null) {
+                    const newTime = Math.max(0, Math.min(audioBuffer.duration, details.seekTime));
+                    if (isPlaying) startAudio(newTime);
+                    else { currentOffset = newTime; updateSeekUI(newTime); }
+                }
+            });
+        }
+
+        function updateSeekUI(time) {
+            currentTimeDisplay.textContent = formatTime(time);
+            seekSlider.value = time;
+        }
+
+        function updatePositionState() {
+            if (!('mediaSession' in navigator) || !audioBuffer) return;
+            try {
+                navigator.mediaSession.setPositionState({
+                    duration: audioBuffer.duration,
+                    playbackRate: 1,
+                    position: Math.min(getCurrentTime(), audioBuffer.duration)
+                });
+            } catch(e) {}
+        }
+
         function stopAudio() {
             if (sourceNode) {
                 try {
@@ -487,6 +641,9 @@
             }
             isPlaying = false;
             playBtn.textContent = translations[currentLang].play;
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = 'paused';
+            }
         }
 
         function startAudio(offset) {
@@ -514,6 +671,7 @@
                     currentOffset = 0;
                     seekSlider.value = 0;
                     currentTimeDisplay.textContent = '0:00';
+                    updatePositionState();
                 }
             };
 
@@ -522,16 +680,44 @@
             currentOffset = offset;
             isPlaying = true;
             playBtn.textContent = translations[currentLang].pause;
-            
             isSeeking = false;
+
+            if ('mediaSession' in navigator) {
+                navigator.mediaSession.playbackState = 'playing';
+            }
+            updatePositionState();
 
             updateInterval = setInterval(() => {
                 if (isPlaying && !isDraggingSeek) {
                     const time = getCurrentTime();
                     currentTimeDisplay.textContent = formatTime(time);
                     seekSlider.value = time;
+                    updatePositionState();
                 }
-            }, 100);
+            }, 500);
+        }
+
+        // Удаляет сайты и мусор из названия файла
+        function cleanFileName(name) {
+            return name
+                // убираем расширение на всякий случай
+                .replace(/\.[^/.]+$/, '')
+                // (site.com) или [site.com]
+                .replace(/[\(\[][^\)\]]*\.(com|ru|net|org|io|me|co|uk|fm|xyz|club|site|online|music|audio)[^\)\]]*[\)\]]/gi, '')
+                // голый домен в начале или конце: "site.com - трек"
+                .replace(/^[\w\-]+\.(com|ru|net|org|io|me|co|uk|fm|xyz|club|site|online|music|audio)\s*[\-–—|]?\s*/gi, '')
+                .replace(/\s*[\-–—|]?\s*[\w\-]+\.(com|ru|net|org|io|me|co|uk|fm|xyz|club|site|online|music|audio)$/gi, '')
+                // www.что-угодно.домен
+                .replace(/\bwww\.[^\s\]\)]+/gi, '')
+                // http(s):// ссылки
+                .replace(/https?:\/\/[^\s]+/gi, '')
+                // @ упоминания типо @channel
+                .replace(/@\w+/g, '')
+                // несколько пробелов / тире в конце/начале
+                .replace(/\s*[\-–—]\s*$/, '')
+                .replace(/^\s*[\-–—]\s*/, '')
+                .replace(/\s{2,}/g, ' ')
+                .trim();
         }
 
         uploadArea.addEventListener('click', () => audioFile.click());
@@ -562,7 +748,8 @@
                 stopAudio();
                 currentOffset = 0;
                 
-                currentFileName = file.name.replace(/\.[^/.]+$/, '');
+                const rawName = file.name.replace(/\.[^/.]+$/, '');
+                currentFileName = cleanFileName(rawName);
                 fileInfo.textContent = `📁 ${file.name}`;
                 controls.classList.add('active');
 
@@ -582,7 +769,8 @@
                 playBtn.disabled = false;
                 
                 loadingOverlay.classList.remove('show');
-                
+
+                setupMediaSession();
                 startAudio(0);
 
             } catch (error) {
@@ -691,7 +879,7 @@
 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${currentFileName} - Bassed.wav`;
+                a.download = `[BASSED] ${currentFileName}.wav`;
                 a.click();
 
                 URL.revokeObjectURL(url);
@@ -751,4 +939,3 @@
     </script>
 </body>
 </html>
-
