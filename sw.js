@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'bass-booster-v3';
+const CACHE_VERSION = 'bass-booster-v4';
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
